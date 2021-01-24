@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "id": "InventoryDumper",
+  "id": "inventorydumper",
   "version": "${version}",
   "name": "InventoryDumper",
   "description": "",
