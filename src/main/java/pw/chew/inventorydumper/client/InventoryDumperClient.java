@@ -1,5 +1,6 @@
 package pw.chew.inventorydumper.client;
 
+import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import net.fabricmc.api.ClientModInitializer;
@@ -93,13 +94,34 @@ public class InventoryDumperClient implements ClientModInitializer {
         // Cycle through each NBT tag
         for(String key : tag.getKeys()) {
             JsonObject info = new JsonObject();
-            info.addProperty("key", key);
             Tag getTag = tag.get(key);
+
             // Only add if there's associated data
-            if (getTag != null) {
-                info.addProperty("info", getTag.toString());
-                tags.add(info);
+            if (getTag == null) {
+                continue;
             }
+
+            // Special cases we can handle
+            switch (key) {
+                case ("Enchantments"):
+                    JsonArray enchantmentArray = new JsonArray();
+                    info.remove("key");
+                    JsonArray data = new Gson().fromJson(getTag.toString(), JsonArray.class);
+                    for (int i = 0; i < data.size(); i++) {
+                        JsonObject enchantment = data.get(i).getAsJsonObject();
+                        short level = Short.parseShort(enchantment.get("lvl").getAsString().replace("s", ""));
+                        String name = enchantment.get("id").getAsString();
+                        JsonObject details = new JsonObject();
+                        details.addProperty(name, level);
+                        enchantmentArray.add(details);
+                    }
+                    info.add("Enchantments", enchantmentArray);
+                    tags.add(info);
+                    continue;
+            }
+
+            info.addProperty(key, getTag.toString());
+            tags.add(info);
         }
         // Add final NBT to object
         json.add("nbt", tags);
