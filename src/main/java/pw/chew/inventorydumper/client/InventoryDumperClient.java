@@ -30,7 +30,7 @@ public class InventoryDumperClient implements ClientModInitializer {
             // Looks for "o" presses inside a screen. Only do it no more than once a second.
             if (InputUtil.isKeyPressed(client.getWindow().getHandle(), 79) && getDelayInSeconds() >= 1) {
                 // Only work if a screen is open
-                if (client.currentScreen != null) {
+                if (client.currentScreen != null && client.player != null) {
                     // Reset Timer
                     lastPressed = Instant.now();
 
@@ -39,6 +39,13 @@ public class InventoryDumperClient implements ClientModInitializer {
 
                     // Get inventory slots
                     List<Slot> slots = client.player.currentScreenHandler.slots;
+
+                    String name = client.currentScreen.getTitle().getString();
+                    int slotCount = slots.size();
+
+                    JsonObject data = new JsonObject();
+                    data.addProperty("name", name);
+                    data.addProperty("slot_count", slotCount);
 
                     // Sort items into json array
                     JsonArray info = new JsonArray();
@@ -55,6 +62,7 @@ public class InventoryDumperClient implements ClientModInitializer {
                         // Old debug message to print out item names
                         // client.player.sendMessage(new LiteralText("Item name: " + item.getName().getString()), false);
                     }
+                    data.add("slots", info);
 
                     // Print to console
                     // TODO: Print to file
