@@ -116,7 +116,7 @@ public class InventoryDumperClient implements ClientModInitializer {
      * @return time between now and last time key was pressed
      */
     public long getDelayInSeconds() {
-        return Instant.now().getEpochSecond() - lastPressed.getEpochSecond();
+        return (Instant.now().toEpochMilli() - lastPressed.toEpochMilli()) / 1000;
     }
 
     /**
