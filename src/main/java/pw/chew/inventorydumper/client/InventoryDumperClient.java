@@ -13,6 +13,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.screen.slot.Slot;
+import net.minecraft.text.LiteralText;
 
 import java.time.Instant;
 import java.util.List;
@@ -57,7 +58,9 @@ public class InventoryDumperClient implements ClientModInitializer {
 
                     // Print to console
                     // TODO: Print to file
-                    System.out.println(info.toString());
+                    System.out.println(data.toString());
+
+                    client.player.sendMessage(new LiteralText("Inventory dumped! See console for JSON."), false);
                 }
             }
         });
