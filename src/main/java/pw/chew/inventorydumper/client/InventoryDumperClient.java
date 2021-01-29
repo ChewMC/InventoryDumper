@@ -12,6 +12,7 @@ import net.minecraft.client.util.InputUtil;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.screen.ScreenHandlerType;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.text.LiteralText;
 
@@ -27,51 +28,87 @@ public class InventoryDumperClient implements ClientModInitializer {
     public void onInitializeClient() {
         // Runs this every tick (I think?)
         ClientTickEvents.END_CLIENT_TICK.register((MinecraftClient client) -> {
-            // Looks for "o" presses inside a screen. Only do it no more than once a second.
-            if (InputUtil.isKeyPressed(client.getWindow().getHandle(), 79) && getDelayInSeconds() >= 1) {
-                // Only work if a screen is open
-                if (client.currentScreen != null && client.player != null) {
-                    // Reset Timer
-                    lastPressed = Instant.now();
+            if (client.currentScreen == null || client.player == null)
+                return;
 
-                    // Old debug message to find inventory title
-                    // client.player.sendMessage(new LiteralText("Inventory Title: " + client.currentScreen.getTitle().getString()), false);
+            if (getDelayInSeconds() < 1)
+                return;
 
-                    // Get inventory slots
-                    List<Slot> slots = client.player.currentScreenHandler.slots;
-
-                    String name = client.currentScreen.getTitle().getString();
-                    int slotCount = slots.size();
-
-                    JsonObject data = new JsonObject();
-                    data.addProperty("name", name);
-                    data.addProperty("slot_count", slotCount);
-
-                    // Sort items into json array
-                    JsonArray info = new JsonArray();
-                    for (Slot slot : slots) {
-                        ItemStack item = slot.getStack();
-
-                        // Only add if there's an item
-                        if (item.getCount() == 0) {
-                            continue;
-                        }
-
-                        info.add(itemToJSON(item));
-
-                        // Old debug message to print out item names
-                        // client.player.sendMessage(new LiteralText("Item name: " + item.getName().getString()), false);
-                    }
-                    data.add("slots", info);
-
-                    // Print to console
-                    // TODO: Print to file
-                    System.out.println(data.toString());
-
-                    client.player.sendMessage(new LiteralText("Inventory dumped! See console for JSON."), false);
-                }
+            // Ignore unhandled screens
+            try {
+                client.player.currentScreenHandler.getType();
+            } catch (UnsupportedOperationException e) {
+                return;
             }
+            
+            // Looks for "o" presses inside a screen. Only do it no more than once a second.
+            if (InputUtil.isKeyPressed(client.getWindow().getHandle(), 79)) {
+                // Reset Timer
+                lastPressed = Instant.now();
+
+                // Dump the inventory
+                JsonObject data = dumpInventory(client.player.currentScreenHandler.slots, client.currentScreen.getTitle().getString());
+
+                // Print to console
+                // TODO: Print to file
+                System.out.println(data.toString());
+
+                client.player.sendMessage(new LiteralText("Inventory dumped! See console for JSON."), false);
+            }
+            // Looks for "p" presses, only dumps chest inventory, not player inventory
+            if (InputUtil.isKeyPressed(client.getWindow().getHandle(), 80)) {
+                // Reset Timer
+                lastPressed = Instant.now();
+
+                List<Slot> slots = client.player.currentScreenHandler.slots;
+                if (slots.size() <= 36) {
+                    client.player.sendMessage(new LiteralText("No inventory found."), false);
+                    return;
+                }
+
+                List<Slot> useSlots = slots.subList(0, slots.size() - 36);
+
+                // Dump the inventory
+                JsonObject data = dumpInventory(useSlots, client.currentScreen.getTitle().getString());
+
+                // Print to console
+                // TODO: Print to file
+                System.out.println(data.toString());
+
+                client.player.sendMessage(new LiteralText("Inventory dumped! See console for JSON."), false);
+            }
+
         });
+    }
+
+    /**
+     * The method that does all the magic!
+     * @param slots the inventory slots
+     * @param name the name of the inventory
+     */
+    public JsonObject dumpInventory(List<Slot> slots, String name) {
+        JsonObject data = new JsonObject();
+        data.addProperty("name", name);
+        data.addProperty("slot_count", slots.size());
+
+        // Sort items into json array
+        JsonArray info = new JsonArray();
+        for (Slot slot : slots) {
+            ItemStack item = slot.getStack();
+
+            // Only add if there's an item
+            if (item.getCount() == 0) {
+                continue;
+            }
+
+            info.add(itemToJSON(item));
+
+            // Old debug message to print out item names
+            // client.player.sendMessage(new LiteralText("Item name: " + item.getName().getString()), false);
+        }
+        data.add("slots", info);
+
+        return data;
     }
 
     /**
